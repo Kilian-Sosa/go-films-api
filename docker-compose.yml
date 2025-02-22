@@ -1,0 +1,40 @@
+services:
+  api:
+    build: .
+    container_name: go-films-api
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["/app/server"]
+
+  db:
+    image: mysql:8
+    container_name: go-films-db
+    env_file:
+      - .env
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      retries: 5
+
+  migrate:
+    build: .
+    container_name: go-films-migrate
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["/app/migrate"]
+
+volumes:
+  db_data:
