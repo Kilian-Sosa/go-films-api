@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"go-films-api/internal/delivery/http"
+	"go-films-api/internal/delivery/http/middleware"
 	"go-films-api/internal/repository"
 	"go-films-api/internal/usecase"
 	"log"
@@ -41,11 +42,18 @@ func main() {
 	filmService := usecase.NewFilmService(filmRepo)
 	filmHandler := http.NewFilmHandler(filmService)
 
+	authMiddleware := middleware.JWTMiddleware()
+
 	r := gin.Default()
 
 	r.POST("/register", authHandler.Register)
 	r.POST("/login", authHandler.Login)
-	r.GET("/films", filmHandler.GetFilms)
+
+	protected := r.Group("/")
+	protected.Use(authMiddleware)
+	{
+		protected.GET("/films", filmHandler.GetFilms)
+	}
 
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("could not start server: %v", err)
