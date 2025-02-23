@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestRegisterSuccess(t *testing.T) {
+func TestRegister_Success(t *testing.T) {
 	mockRepo := new(repository.MockUserRepository)
 	service := usecase.NewUserService(mockRepo)
 
@@ -110,7 +110,7 @@ func TestRegister_ValidAllRequirements(t *testing.T) {
 	mockRepo.AssertCalled(t, "CreateUser", mock.Anything)
 }
 
-func TestLoginSuccess(t *testing.T) {
+func TestLogin_Success(t *testing.T) {
 	mockRepo := new(repository.MockUserRepository)
 	service := usecase.NewUserService(mockRepo)
 

@@ -74,3 +74,34 @@ func TestListFilms_WithGenreAndDate(t *testing.T) {
 	assert.Equal(t, uint(4), films[0].ID)
 	mockRepo.AssertExpectations(t)
 }
+
+func TestGetFilmDetails_Found(t *testing.T) {
+	mockRepo := new(repository.MockFilmRepository)
+	service := usecase.NewFilmService(mockRepo)
+
+	expectedFilm := &domain.Film{
+		ID:    1,
+		Title: "My Film",
+		User:  domain.User{ID: 2, Username: "creator"},
+	}
+
+	mockRepo.On("GetFilmByID", uint(1)).Return(expectedFilm, nil)
+
+	film, err := service.GetFilmDetails(1)
+	assert.NoError(t, err)
+	assert.Equal(t, uint(1), film.ID)
+	assert.Equal(t, "creator", film.User.Username)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestGetFilmDetails_NotFound(t *testing.T) {
+	mockRepo := new(repository.MockFilmRepository)
+	service := usecase.NewFilmService(mockRepo)
+
+	mockRepo.On("GetFilmByID", uint(99)).Return(nil, nil) // film not found
+
+	film, err := service.GetFilmDetails(99)
+	assert.Nil(t, film)
+	assert.EqualError(t, err, "film not found")
+	mockRepo.AssertExpectations(t)
+}
