@@ -35,3 +35,8 @@ func (m *MockFilmRepository) UpdateFilm(film *domain.Film) error {
 	args := m.Called(film)
 	return args.Error(0)
 }
+
+func (m *MockFilmRepository) DeleteFilmByID(id uint) error {
+	args := m.Called(id)
+	return args.Error(0)
+}
