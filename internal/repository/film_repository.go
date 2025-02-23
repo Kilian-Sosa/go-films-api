@@ -15,6 +15,7 @@ type FilmRepository interface {
 	FindFilms(filters FilmFilters) ([]domain.Film, error)
 	GetFilmByID(id uint) (*domain.Film, error)
 	CreateFilm(film *domain.Film) error
+	UpdateFilm(film *domain.Film) error
 }
 
 type filmRepositoryGorm struct {
@@ -75,6 +76,13 @@ func (r *filmRepositoryGorm) CreateFilm(film *domain.Film) error {
 			return fmt.Errorf("film with title '%s' already exists", film.Title)
 		}
 		return err
+	}
+	return nil
+}
+
+func (r *filmRepositoryGorm) UpdateFilm(film *domain.Film) error {
+	if err := r.db.Save(film).Error; err != nil {
+		return fmt.Errorf("could not update film: %w", err)
 	}
 	return nil
 }
