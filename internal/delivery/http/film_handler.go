@@ -183,3 +183,39 @@ func (h *FilmHandler) UpdateFilm(c *gin.Context) {
 
 	c.JSON(http.StatusOK, updated)
 }
+
+func (h *FilmHandler) DeleteFilm(c *gin.Context) {
+	idParam := c.Param("id")
+	id64, err := strconv.ParseUint(idParam, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid film ID"})
+		return
+	}
+	filmID := uint(id64)
+
+	userIDVal, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	userID, ok := userIDVal.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	err = h.filmService.DeleteFilm(filmID, userID)
+	if err != nil {
+		switch err.Error() {
+		case "film not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": "film not found"})
+		case "forbidden: only creator can delete this film":
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden: only creator can delete this film"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not delete film"})
+		}
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
