@@ -40,6 +40,13 @@ const (
 // Regex for username: start with letter, then alphanumeric
 var usernameRegex = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]*$`)
 
+// Regex to check for uppercase letter, digit, and special character
+var (
+	uppercaseRegex   = regexp.MustCompile(`[A-Z]`)
+	digitRegex       = regexp.MustCompile(`\d`)
+	specialCharRegex = regexp.MustCompile(`[^A-Za-z0-9]`) // anything not alphanumeric
+)
+
 func (s *userService) Register(username, password string) error {
 	if !usernameRegex.MatchString(username) {
 		return errors.New("username must start with a letter and contain only alphanumeric characters")
@@ -47,6 +54,18 @@ func (s *userService) Register(username, password string) error {
 
 	if len(password) < PasswordMinLen || len(password) > PasswordMaxLen {
 		return fmt.Errorf("password must be between %d and %d characters", PasswordMinLen, PasswordMaxLen)
+	}
+
+	if !uppercaseRegex.MatchString(password) {
+		return errors.New("password must contain at least one uppercase letter")
+	}
+
+	if !digitRegex.MatchString(password) {
+		return errors.New("password must contain at least one digit")
+	}
+
+	if !specialCharRegex.MatchString(password) {
+		return errors.New("password must contain at least one special character")
 	}
 
 	existing, err := s.userRepo.GetUserByUsername(username)
