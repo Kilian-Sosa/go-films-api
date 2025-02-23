@@ -126,7 +126,7 @@ func TestLoginSuccess(t *testing.T) {
 	assert.WithinDuration(t, time.Now().Add(time.Hour), exp, 2*time.Second)
 }
 
-func TestLoginInvalidPassword(t *testing.T) {
+func TestLogin_InvalidPassword(t *testing.T) {
 	mockRepo := new(repository.MockUserRepository)
 	service := usecase.NewUserService(mockRepo)
 
@@ -142,7 +142,7 @@ func TestLoginInvalidPassword(t *testing.T) {
 	assert.EqualError(t, err, "invalid username or password")
 }
 
-func TestLoginNoUser(t *testing.T) {
+func TestLogin_NoUser(t *testing.T) {
 	mockRepo := new(repository.MockUserRepository)
 	service := usecase.NewUserService(mockRepo)
 
