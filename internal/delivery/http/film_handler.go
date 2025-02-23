@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"go-films-api/internal/usecase"
@@ -39,4 +40,27 @@ func (h *FilmHandler) GetFilms(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, films)
+}
+
+func (h *FilmHandler) GetFilmDetails(c *gin.Context) {
+	idParam := c.Param("id")
+
+	id64, err := strconv.ParseUint(idParam, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid film ID"})
+		return
+	}
+	filmID := uint(id64)
+
+	film, err := h.filmService.GetFilmDetails(filmID)
+	if err != nil {
+		if err.Error() == "film not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "film not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not retrieve film details"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, film)
 }
