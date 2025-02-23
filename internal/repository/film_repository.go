@@ -1,17 +1,20 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"go-films-api/internal/domain"
 
+	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 )
 
 type FilmRepository interface {
 	FindFilms(filters FilmFilters) ([]domain.Film, error)
 	GetFilmByID(id uint) (*domain.Film, error)
+	CreateFilm(film *domain.Film) error
 }
 
 type filmRepositoryGorm struct {
@@ -58,4 +61,20 @@ func (r *filmRepositoryGorm) GetFilmByID(id uint) (*domain.Film, error) {
 		return nil, fmt.Errorf("could not get film: %w", err)
 	}
 	return &film, nil
+}
+
+func isDuplicateKeyError(err error) bool {
+	var mysqlError *mysql.MySQLError
+	return errors.As(err, &mysqlError) && mysqlError.Number == 1062
+}
+
+func (r *filmRepositoryGorm) CreateFilm(film *domain.Film) error {
+	if err := r.db.Create(film).Error; err != nil {
+		// Check if it's a duplicate key error on Title
+		if isDuplicateKeyError(err) {
+			return fmt.Errorf("film with title '%s' already exists", film.Title)
+		}
+		return err
+	}
+	return nil
 }
