@@ -1,6 +1,7 @@
 package http_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net/http"
@@ -30,6 +31,14 @@ func (m *MockFilmService) ListFilms(title, genre string, releaseDate time.Time) 
 
 func (m *MockFilmService) GetFilmDetails(id uint) (*domain.Film, error) {
 	args := m.Called(id)
+	if film, ok := args.Get(0).(*domain.Film); ok {
+		return film, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *MockFilmService) CreateFilm(title, director, cast, genre, synopsis string, releaseDate time.Time, userID uint) (*domain.Film, error) {
+	args := m.Called(title, director, cast, genre, synopsis, releaseDate, userID)
 	if film, ok := args.Get(0).(*domain.Film); ok {
 		return film, args.Error(1)
 	}
@@ -180,5 +189,73 @@ func TestGetFilmDetails_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 	assert.Contains(t, w.Body.String(), "film not found")
 
+	mockService.AssertExpectations(t)
+}
+
+func TestCreateFilm_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockService := new(MockFilmService)
+	filmHandler := filmHttp.NewFilmHandler(mockService)
+
+	r := gin.Default()
+
+	ginUserIDMiddleware := func(c *gin.Context) {
+		c.Set("userID", uint(5))
+		c.Next()
+	}
+	r.Use(ginUserIDMiddleware)
+
+	r.POST("/films", filmHandler.CreateFilm)
+
+	mockFilm := &domain.Film{
+		ID:     99,
+		UserID: 5,
+		Title:  "New Film",
+	}
+
+	mockService.On("CreateFilm", "New Film", "Dir", "Cast", "Genre", "Syn", mock.Anything, uint(5)).
+		Return(mockFilm, nil)
+
+	body := `{"title":"New Film","director":"Dir","cast":"Cast","genre":"Genre","synopsis":"Syn"}`
+	req, _ := http.NewRequest("POST", "/films", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+	assert.Contains(t, w.Body.String(), `"Title":"New Film"`)
+	mockService.AssertExpectations(t)
+}
+
+func TestCreateFilm_DuplicateTitle(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockService := new(MockFilmService)
+	filmHandler := filmHttp.NewFilmHandler(mockService)
+
+	r := gin.Default()
+
+	ginUserIDMiddleware := func(c *gin.Context) {
+		c.Set("userID", uint(5))
+		c.Next()
+	}
+	r.Use(ginUserIDMiddleware)
+
+	r.POST("/films", filmHandler.CreateFilm)
+
+	mockService.On("CreateFilm", "Duplicate", "", "", "", "", mock.Anything, uint(5)).
+		Return(nil, fmt.Errorf("film with title 'Duplicate' already exists"))
+
+	body := `{"title":"Duplicate","director":"","cast":"","genre":"","synopsis":""}`
+	req, _ := http.NewRequest("POST", "/films", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+	assert.Contains(t, w.Body.String(), "film with title 'Duplicate' already exists")
 	mockService.AssertExpectations(t)
 }
