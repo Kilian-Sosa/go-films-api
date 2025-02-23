@@ -25,3 +25,8 @@ func (m *MockFilmRepository) GetFilmByID(id uint) (*domain.Film, error) {
 	}
 	return nil, args.Error(1)
 }
+
+func (m *MockFilmRepository) CreateFilm(film *domain.Film) error {
+	args := m.Called(film)
+	return args.Error(0)
+}
