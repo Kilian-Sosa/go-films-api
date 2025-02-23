@@ -38,20 +38,6 @@ func TestRegister_UsernameTaken(t *testing.T) {
 	assert.Equal(t, "username already taken", err.Error())
 }
 
-func TestRegister_ValidUsernamePassword(t *testing.T) {
-	mockRepo := new(repository.MockUserRepository)
-	service := usecase.NewUserService(mockRepo)
-
-	mockRepo.On("GetUserByUsername", "John123").Return(nil, nil)
-	mockRepo.On("CreateUser", mock.Anything).Return(nil)
-
-	err := service.Register("John123", "secret12")
-	assert.NoError(t, err)
-
-	mockRepo.AssertCalled(t, "GetUserByUsername", "John123")
-	mockRepo.AssertCalled(t, "CreateUser", mock.Anything)
-}
-
 func TestRegister_InvalidUsername(t *testing.T) {
 	mockRepo := new(repository.MockUserRepository)
 	service := usecase.NewUserService(mockRepo)
@@ -82,6 +68,46 @@ func TestRegister_PasswordTooLong(t *testing.T) {
 	err := service.Register("BetaUser", tooLongPass)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "password must be between 6 and 20 characters")
+}
+
+func TestRegister_MissingUppercase(t *testing.T) {
+	mockRepo := new(repository.MockUserRepository)
+	service := usecase.NewUserService(mockRepo)
+
+	err := service.Register("UserTest", "abcd123#")
+	assert.Error(t, err)
+	assert.Equal(t, "password must contain at least one uppercase letter", err.Error())
+}
+
+func TestRegister_MissingDigit(t *testing.T) {
+	mockRepo := new(repository.MockUserRepository)
+	service := usecase.NewUserService(mockRepo)
+
+	err := service.Register("UserTest", "Abcd#xyz")
+	assert.Error(t, err)
+	assert.Equal(t, "password must contain at least one digit", err.Error())
+}
+
+func TestRegister_MissingSpecialChar(t *testing.T) {
+	mockRepo := new(repository.MockUserRepository)
+	service := usecase.NewUserService(mockRepo)
+
+	err := service.Register("UserTest", "Abcd1234")
+	assert.Error(t, err)
+	assert.Equal(t, "password must contain at least one special character", err.Error())
+}
+
+func TestRegister_ValidAllRequirements(t *testing.T) {
+	mockRepo := new(repository.MockUserRepository)
+	service := usecase.NewUserService(mockRepo)
+
+	validPassword := "Abcd1234!"
+	mockRepo.On("GetUserByUsername", "ValidUser").Return(nil, nil)
+	mockRepo.On("CreateUser", mock.Anything).Return(nil)
+
+	err := service.Register("ValidUser", validPassword)
+	assert.NoError(t, err)
+	mockRepo.AssertCalled(t, "CreateUser", mock.Anything)
 }
 
 func TestLoginSuccess(t *testing.T) {
