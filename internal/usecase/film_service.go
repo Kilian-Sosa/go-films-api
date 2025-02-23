@@ -14,6 +14,7 @@ type FilmService interface {
 	GetFilmDetails(id uint) (*domain.Film, error)
 	CreateFilm(title, director, cast, genre, synopsis string, releaseDate time.Time, userID uint) (*domain.Film, error)
 	UpdateFilm(id, userID uint, data UpdateFilmData) (*domain.Film, error)
+	DeleteFilm(id, userID uint) error
 }
 
 type UpdateFilmData struct {
@@ -116,4 +117,24 @@ func (s *filmService) UpdateFilm(id, userID uint, data UpdateFilmData) (*domain.
 	}
 
 	return film, nil
+}
+
+func (s *filmService) DeleteFilm(id, userID uint) error {
+	film, err := s.filmRepo.GetFilmByID(id)
+	if err != nil {
+		return fmt.Errorf("repository error: %w", err)
+	}
+	if film == nil {
+		return errors.New("film not found")
+	}
+
+	if film.UserID != userID {
+		return errors.New("forbidden: only creator can delete this film")
+	}
+
+	if err := s.filmRepo.DeleteFilmByID(id); err != nil {
+		return err
+	}
+
+	return nil
 }
