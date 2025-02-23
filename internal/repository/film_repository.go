@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"time"
 
 	"go-films-api/internal/domain"
@@ -10,6 +11,7 @@ import (
 
 type FilmRepository interface {
 	FindFilms(filters FilmFilters) ([]domain.Film, error)
+	GetFilmByID(id uint) (*domain.Film, error)
 }
 
 type filmRepositoryGorm struct {
@@ -45,4 +47,15 @@ func (r *filmRepositoryGorm) FindFilms(filters FilmFilters) ([]domain.Film, erro
 		return nil, err
 	}
 	return films, nil
+}
+
+func (r *filmRepositoryGorm) GetFilmByID(id uint) (*domain.Film, error) {
+	var film domain.Film
+	err := r.db.Preload("User").First(&film, id).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("could not get film: %w", err)
+	}
+	return &film, nil
 }
