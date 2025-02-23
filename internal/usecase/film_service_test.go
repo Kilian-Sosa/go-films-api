@@ -1,10 +1,12 @@
 package usecase_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 
 	"go-films-api/internal/domain"
 	"go-films-api/internal/repository"
@@ -98,10 +100,54 @@ func TestGetFilmDetails_NotFound(t *testing.T) {
 	mockRepo := new(repository.MockFilmRepository)
 	service := usecase.NewFilmService(mockRepo)
 
-	mockRepo.On("GetFilmByID", uint(99)).Return(nil, nil) // film not found
+	mockRepo.On("GetFilmByID", uint(99)).Return(nil, nil)
 
 	film, err := service.GetFilmDetails(99)
 	assert.Nil(t, film)
 	assert.EqualError(t, err, "film not found")
 	mockRepo.AssertExpectations(t)
+}
+
+func TestCreateFilm_Success(t *testing.T) {
+	mockRepo := new(repository.MockFilmRepository)
+	filmService := usecase.NewFilmService(mockRepo)
+
+	mockRepo.On("CreateFilm", mock.AnythingOfType("*domain.Film")).
+		Return(nil).
+		Run(func(args mock.Arguments) {
+			// Simulate setting an auto-increment ID
+			arg := args.Get(0).(*domain.Film)
+			arg.ID = 100
+		})
+
+	res, err := filmService.CreateFilm(
+		"Unique Title", "Director", "Cast", "Action", "Some synopsis", time.Time{}, 1,
+	)
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+	assert.Equal(t, uint(100), res.ID)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestCreateFilm_DuplicateTitle(t *testing.T) {
+	mockRepo := new(repository.MockFilmRepository)
+	filmService := usecase.NewFilmService(mockRepo)
+
+	mockRepo.On("CreateFilm", mock.Anything).
+		Return(fmt.Errorf("film with title 'Duplicate' already exists"))
+
+	res, err := filmService.CreateFilm("Duplicate", "", "", "", "", time.Time{}, 1)
+	assert.Nil(t, res)
+	assert.EqualError(t, err, "film with title 'Duplicate' already exists")
+	mockRepo.AssertExpectations(t)
+}
+
+func TestCreateFilm_EmptyTitle(t *testing.T) {
+	mockRepo := new(repository.MockFilmRepository)
+	filmService := usecase.NewFilmService(mockRepo)
+
+	res, err := filmService.CreateFilm("", "Dir", "Cast", "Genre", "Synopsis", time.Time{}, 1)
+	assert.Nil(t, res)
+	assert.EqualError(t, err, "title is required")
+	mockRepo.AssertNotCalled(t, "CreateFilm", mock.Anything)
 }
