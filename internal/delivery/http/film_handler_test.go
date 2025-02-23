@@ -1,6 +1,7 @@
 package http_test
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -23,6 +24,14 @@ func (m *MockFilmService) ListFilms(title, genre string, releaseDate time.Time) 
 	args := m.Called(title, genre, releaseDate)
 	if films, ok := args.Get(0).([]domain.Film); ok {
 		return films, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *MockFilmService) GetFilmDetails(id uint) (*domain.Film, error) {
+	args := m.Called(id)
+	if film, ok := args.Get(0).(*domain.Film); ok {
+		return film, args.Error(1)
 	}
 	return nil, args.Error(1)
 }
@@ -117,6 +126,59 @@ func TestGetFilms_ServiceError(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assert.Contains(t, w.Body.String(), "failed to fetch films")
+
+	mockService.AssertExpectations(t)
+}
+
+func TestGetFilmDetails_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockService := new(MockFilmService)
+	filmHandler := filmHttp.NewFilmHandler(mockService)
+
+	r := gin.Default()
+	r.GET("/films/:id", filmHandler.GetFilmDetails)
+
+	expectedFilm := &domain.Film{
+		ID:    1,
+		Title: "My Film",
+		User:  domain.User{ID: 2, Username: "creatoruser"},
+	}
+
+	mockService.
+		On("GetFilmDetails", uint(1)).
+		Return(expectedFilm, nil)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/films/1", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "My Film")
+	assert.Contains(t, w.Body.String(), "creatoruser")
+
+	mockService.AssertExpectations(t)
+}
+
+func TestGetFilmDetails_NotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockService := new(MockFilmService)
+	filmHandler := filmHttp.NewFilmHandler(mockService)
+
+	r := gin.Default()
+	r.GET("/films/:id", filmHandler.GetFilmDetails)
+
+	mockService.
+		On("GetFilmDetails", uint(99)).
+		Return(nil, errors.New("film not found"))
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/films/99", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Contains(t, w.Body.String(), "film not found")
 
 	mockService.AssertExpectations(t)
 }
