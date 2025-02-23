@@ -56,6 +56,7 @@ func main() {
 		protected.GET("/films/:id", filmHandler.GetFilmDetails)
 		protected.POST("/films", filmHandler.CreateFilm)
 		protected.PUT("/films/:id", filmHandler.UpdateFilm)
+		protected.DELETE("/films/:id", filmHandler.DeleteFilm)
 	}
 
 	if err := r.Run(":" + port); err != nil {
