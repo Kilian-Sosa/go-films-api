@@ -15,7 +15,7 @@ import (
 
 type UserService interface {
 	Register(username, password string) error
-	Login(username, password string) (string, error)
+	Login(username, password string) (string, time.Time, error)
 }
 
 type userService struct {
@@ -56,27 +56,31 @@ func (s *userService) Register(username, password string) error {
 	return nil
 }
 
-func (s *userService) Login(username, password string) (string, error) {
+func (s *userService) Login(username, password string) (string, time.Time, error) {
 	user, err := s.userRepo.GetUserByUsername(username)
 	if err != nil {
-		return "", fmt.Errorf("repository error: %w", err)
+		return "", time.Time{}, fmt.Errorf("repository error: %w", err)
 	}
+
 	if user == nil {
-		return "", errors.New("invalid username or password")
+		return "", time.Time{}, errors.New("invalid username or password")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return "", errors.New("invalid username or password")
+		return "", time.Time{}, errors.New("invalid username or password")
 	}
+
+	expirationTime := time.Now().Add(time.Hour)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": user.ID,
-		"exp": time.Now().Add(time.Hour).Unix(),
+		"exp": expirationTime.Unix(),
 	})
+
 	signedToken, err := token.SignedString(s.jwtKey)
 	if err != nil {
-		return "", fmt.Errorf("could not sign token: %w", err)
+		return "", time.Time{}, fmt.Errorf("could not sign token: %w", err)
 	}
 
-	return signedToken, nil
+	return signedToken, expirationTime, nil
 }

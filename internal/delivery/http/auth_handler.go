@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"time"
 
 	"go-films-api/internal/usecase"
 
@@ -50,11 +51,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.userService.Login(req.Username, req.Password)
+	token, exp, err := h.userService.Login(req.Username, req.Password) // changed signature
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	c.JSON(http.StatusOK, gin.H{
+		"token":      token,
+		"expires_at": exp.Format(time.RFC3339),
+	})
 }
