@@ -30,3 +30,8 @@ func (m *MockFilmRepository) CreateFilm(film *domain.Film) error {
 	args := m.Called(film)
 	return args.Error(0)
 }
+
+func (m *MockFilmRepository) UpdateFilm(film *domain.Film) error {
+	args := m.Called(film)
+	return args.Error(0)
+}
