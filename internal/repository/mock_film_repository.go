@@ -17,3 +17,11 @@ func (m *MockFilmRepository) FindFilms(filters FilmFilters) ([]domain.Film, erro
 	}
 	return nil, args.Error(1)
 }
+
+func (m *MockFilmRepository) GetFilmByID(id uint) (*domain.Film, error) {
+	args := m.Called(id)
+	if film, ok := args.Get(0).(*domain.Film); ok {
+		return film, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
