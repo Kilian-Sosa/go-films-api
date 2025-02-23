@@ -11,6 +11,7 @@ import (
 
 	filmHttp "go-films-api/internal/delivery/http"
 	"go-films-api/internal/domain"
+	usecase "go-films-api/internal/usecase"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -39,6 +40,13 @@ func (m *MockFilmService) GetFilmDetails(id uint) (*domain.Film, error) {
 
 func (m *MockFilmService) CreateFilm(title, director, cast, genre, synopsis string, releaseDate time.Time, userID uint) (*domain.Film, error) {
 	args := m.Called(title, director, cast, genre, synopsis, releaseDate, userID)
+	if film, ok := args.Get(0).(*domain.Film); ok {
+		return film, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+func (m *MockFilmService) UpdateFilm(id uint, userID uint, data usecase.UpdateFilmData) (*domain.Film, error) {
+	args := m.Called(id, userID, data)
 	if film, ok := args.Get(0).(*domain.Film); ok {
 		return film, args.Error(1)
 	}
@@ -257,5 +265,123 @@ func TestCreateFilm_DuplicateTitle(t *testing.T) {
 
 	assert.Equal(t, http.StatusConflict, w.Code)
 	assert.Contains(t, w.Body.String(), "film with title 'Duplicate' already exists")
+	mockService.AssertExpectations(t)
+}
+
+func TestUpdateFilm_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockService := new(MockFilmService)
+	filmHandler := filmHttp.NewFilmHandler(mockService)
+
+	r := gin.Default()
+
+	ginUserIDMiddleware := func(c *gin.Context) {
+		c.Set("userID", uint(5))
+		c.Next()
+	}
+	r.Use(ginUserIDMiddleware)
+
+	r.PUT("/films/:id", filmHandler.UpdateFilm)
+
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", uint(5))
+		c.Next()
+	})
+
+	existingFilm := &domain.Film{
+		ID:     10,
+		UserID: 5,
+		Title:  "Updated Title",
+	}
+
+	mockService.
+		On("UpdateFilm", uint(10), uint(5), mock.Anything).
+		Return(existingFilm, nil)
+
+	reqBody := `{"title":"Updated Title"}`
+	req, _ := http.NewRequest("PUT", "/films/10", bytes.NewBufferString(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "Updated Title")
+
+	mockService.AssertExpectations(t)
+}
+
+func TestUpdateFilm_NotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockService := new(MockFilmService)
+	filmHandler := filmHttp.NewFilmHandler(mockService)
+
+	r := gin.Default()
+
+	ginUserIDMiddleware := func(c *gin.Context) {
+		c.Set("userID", uint(5))
+		c.Next()
+	}
+	r.Use(ginUserIDMiddleware)
+
+	r.PUT("/films/:id", filmHandler.UpdateFilm)
+
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", uint(5))
+		c.Next()
+	})
+
+	mockService.
+		On("UpdateFilm", uint(99), uint(5), mock.Anything).
+		Return(nil, errors.New("film not found"))
+
+	reqBody := `{"title":"Updated Film"}`
+	req, _ := http.NewRequest("PUT", "/films/99", bytes.NewBufferString(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Contains(t, w.Body.String(), "film not found")
+	mockService.AssertExpectations(t)
+
+}
+
+func TestUpdateFilm_Forbidden(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockService := new(MockFilmService)
+	filmHandler := filmHttp.NewFilmHandler(mockService)
+
+	r := gin.Default()
+
+	ginUserIDMiddleware := func(c *gin.Context) {
+		c.Set("userID", uint(5))
+		c.Next()
+	}
+	r.Use(ginUserIDMiddleware)
+
+	r.PUT("/films/:id", filmHandler.UpdateFilm)
+
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", uint(5))
+		c.Next()
+	})
+
+	mockService.
+		On("UpdateFilm", uint(100), uint(5), mock.Anything).
+		Return(nil, errors.New("forbidden: only creator can update this film"))
+
+	reqBody := `{"title":"Attempted Update"}`
+	req, _ := http.NewRequest("PUT", "/films/100", bytes.NewBufferString(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+	assert.Contains(t, w.Body.String(), "forbidden: only creator can update this film")
 	mockService.AssertExpectations(t)
 }
