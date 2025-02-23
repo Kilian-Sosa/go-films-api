@@ -151,3 +151,59 @@ func TestCreateFilm_EmptyTitle(t *testing.T) {
 	assert.EqualError(t, err, "title is required")
 	mockRepo.AssertNotCalled(t, "CreateFilm", mock.Anything)
 }
+
+func TestUpdateFilm_Success(t *testing.T) {
+	mockRepo := new(repository.MockFilmRepository)
+	service := usecase.NewFilmService(mockRepo)
+
+	existingFilm := &domain.Film{
+		ID:     10,
+		UserID: 5,
+		Title:  "Old Title",
+	}
+
+	mockRepo.On("GetFilmByID", uint(10)).Return(existingFilm, nil)
+	mockRepo.On("UpdateFilm", mock.Anything).Return(nil)
+
+	data := usecase.UpdateFilmData{
+		Title: strPtr("New Title"),
+	}
+	updatedFilm, err := service.UpdateFilm(10, 5, data)
+	assert.NoError(t, err)
+	assert.Equal(t, "New Title", updatedFilm.Title)
+
+	mockRepo.AssertExpectations(t)
+}
+
+func TestUpdateFilm_NotFound(t *testing.T) {
+	mockRepo := new(repository.MockFilmRepository)
+	service := usecase.NewFilmService(mockRepo)
+
+	mockRepo.On("GetFilmByID", uint(99)).Return(nil, nil)
+
+	data := usecase.UpdateFilmData{
+		Title: strPtr("Whatever"),
+	}
+	film, err := service.UpdateFilm(99, 5, data)
+	assert.Nil(t, film)
+	assert.EqualError(t, err, "film not found")
+
+	mockRepo.AssertExpectations(t)
+}
+
+func TestUpdateFilm_Forbidden(t *testing.T) {
+	mockRepo := new(repository.MockFilmRepository)
+	service := usecase.NewFilmService(mockRepo)
+
+	existingFilm := &domain.Film{ID: 10, UserID: 7, Title: "Owned by someone else"}
+	mockRepo.On("GetFilmByID", uint(10)).Return(existingFilm, nil)
+
+	data := usecase.UpdateFilmData{Title: strPtr("New Title")}
+	film, err := service.UpdateFilm(10, 5, data)
+	assert.Nil(t, film)
+	assert.EqualError(t, err, "forbidden: only creator can update this film")
+}
+
+func strPtr(s string) *string {
+	return &s
+}
