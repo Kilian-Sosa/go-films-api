@@ -207,3 +207,38 @@ func TestUpdateFilm_Forbidden(t *testing.T) {
 func strPtr(s string) *string {
 	return &s
 }
+
+func TestDeleteFilm_Success(t *testing.T) {
+	mockRepo := new(repository.MockFilmRepository)
+	service := usecase.NewFilmService(mockRepo)
+
+	existingFilm := &domain.Film{ID: 10, UserID: 5}
+	mockRepo.On("GetFilmByID", uint(10)).Return(existingFilm, nil)
+	mockRepo.On("DeleteFilmByID", uint(10)).Return(nil)
+
+	err := service.DeleteFilm(10, 5)
+	assert.NoError(t, err)
+
+	mockRepo.AssertExpectations(t)
+}
+
+func TestDeleteFilm_NotFound(t *testing.T) {
+	mockRepo := new(repository.MockFilmRepository)
+	service := usecase.NewFilmService(mockRepo)
+
+	mockRepo.On("GetFilmByID", uint(999)).Return(nil, nil)
+
+	err := service.DeleteFilm(999, 5)
+	assert.EqualError(t, err, "film not found")
+}
+
+func TestDeleteFilm_Forbidden(t *testing.T) {
+	mockRepo := new(repository.MockFilmRepository)
+	service := usecase.NewFilmService(mockRepo)
+
+	existingFilm := &domain.Film{ID: 10, UserID: 7} // userID=7, not 5
+	mockRepo.On("GetFilmByID", uint(10)).Return(existingFilm, nil)
+
+	err := service.DeleteFilm(10, 5)
+	assert.EqualError(t, err, "forbidden: only creator can delete this film")
+}
