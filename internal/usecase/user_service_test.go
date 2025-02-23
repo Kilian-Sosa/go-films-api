@@ -26,16 +26,62 @@ func TestRegisterSuccess(t *testing.T) {
 	mockRepo.AssertCalled(t, "CreateUser", mock.Anything)
 }
 
-func TestRegisterDuplicateUser(t *testing.T) {
+func TestRegister_UsernameTaken(t *testing.T) {
 	mockRepo := new(repository.MockUserRepository)
 	service := usecase.NewUserService(mockRepo)
 
-	existing := &domain.User{ID: 1, Username: "existinguser", Password: "hashedPass"}
-	mockRepo.On("GetUserByUsername", "existinguser").Return(existing, nil)
+	existingUser := &domain.User{ID: 1, Username: "AlphaUser"}
+	mockRepo.On("GetUserByUsername", "AlphaUser").Return(existingUser, nil)
 
-	err := service.Register("existinguser", "somepass")
+	err := service.Register("AlphaUser", "secret12")
 	assert.Error(t, err)
 	assert.Equal(t, "username already taken", err.Error())
+}
+
+func TestRegister_ValidUsernamePassword(t *testing.T) {
+	mockRepo := new(repository.MockUserRepository)
+	service := usecase.NewUserService(mockRepo)
+
+	mockRepo.On("GetUserByUsername", "John123").Return(nil, nil)
+	mockRepo.On("CreateUser", mock.Anything).Return(nil)
+
+	err := service.Register("John123", "secret12")
+	assert.NoError(t, err)
+
+	mockRepo.AssertCalled(t, "GetUserByUsername", "John123")
+	mockRepo.AssertCalled(t, "CreateUser", mock.Anything)
+}
+
+func TestRegister_InvalidUsername(t *testing.T) {
+	mockRepo := new(repository.MockUserRepository)
+	service := usecase.NewUserService(mockRepo)
+
+	err := service.Register("123Invalid", "somepass")
+	assert.Error(t, err)
+	assert.Equal(t, "username must start with a letter and contain only alphanumeric characters", err.Error())
+
+	err = service.Register("John_Doe", "somepass")
+	assert.Error(t, err)
+	assert.Equal(t, "username must start with a letter and contain only alphanumeric characters", err.Error())
+}
+
+func TestRegister_PasswordTooShort(t *testing.T) {
+	mockRepo := new(repository.MockUserRepository)
+	service := usecase.NewUserService(mockRepo)
+
+	err := service.Register("AlphaUser", "123")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "password must be between 6 and 20 characters")
+}
+
+func TestRegister_PasswordTooLong(t *testing.T) {
+	mockRepo := new(repository.MockUserRepository)
+	service := usecase.NewUserService(mockRepo)
+
+	tooLongPass := "thispasswordisdefinitelymorethan20chars"
+	err := service.Register("BetaUser", tooLongPass)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "password must be between 6 and 20 characters")
 }
 
 func TestLoginSuccess(t *testing.T) {
