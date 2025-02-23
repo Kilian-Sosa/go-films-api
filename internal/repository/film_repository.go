@@ -16,6 +16,7 @@ type FilmRepository interface {
 	GetFilmByID(id uint) (*domain.Film, error)
 	CreateFilm(film *domain.Film) error
 	UpdateFilm(film *domain.Film) error
+	DeleteFilmByID(id uint) error
 }
 
 type filmRepositoryGorm struct {
@@ -83,6 +84,13 @@ func (r *filmRepositoryGorm) CreateFilm(film *domain.Film) error {
 func (r *filmRepositoryGorm) UpdateFilm(film *domain.Film) error {
 	if err := r.db.Save(film).Error; err != nil {
 		return fmt.Errorf("could not update film: %w", err)
+	}
+	return nil
+}
+
+func (r *filmRepositoryGorm) DeleteFilmByID(id uint) error {
+	if err := r.db.Delete(&domain.Film{}, id).Error; err != nil {
+		return fmt.Errorf("could not delete film: %w", err)
 	}
 	return nil
 }
