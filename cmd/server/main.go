@@ -53,6 +53,7 @@ func main() {
 	protected.Use(authMiddleware)
 	{
 		protected.GET("/films", filmHandler.GetFilms)
+		protected.GET("/films/:id", filmHandler.GetFilmDetails)
 	}
 
 	if err := r.Run(":" + port); err != nil {
