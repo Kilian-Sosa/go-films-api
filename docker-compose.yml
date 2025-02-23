@@ -3,13 +3,23 @@ services:
     build: .
     container_name: go-films-api
     ports:
-      - "8080:8080"
+      - "8080:8080" # API port
+      - "2345:2345" # Debugger port
     env_file:
       - .env
     depends_on:
       db:
         condition: service_healthy
-    command: ["/app/server"]
+    # command: ["/app/server"] # For Production
+    command: [
+        "dlv",
+        "exec",
+        "/app/server",
+        "--headless",
+        "--listen=0.0.0.0:2345",
+        "--api-version=2",
+        "--accept-multiclient",
+      ] # For Debugging
 
   db:
     image: mysql:8
