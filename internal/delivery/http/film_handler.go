@@ -10,6 +10,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type CreateFilmRequest struct {
+	Title       string `json:"title" binding:"required"`
+	Director    string `json:"director"`
+	ReleaseDate string `json:"release_date"`
+	Cast        string `json:"cast"`
+	Genre       string `json:"genre"`
+	Synopsis    string `json:"synopsis"`
+}
+
 type FilmHandler struct {
 	filmService usecase.FilmService
 }
@@ -63,4 +72,44 @@ func (h *FilmHandler) GetFilmDetails(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, film)
+}
+
+func (h *FilmHandler) CreateFilm(c *gin.Context) {
+	var req CreateFilmRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	var rd time.Time
+	var err error
+	if req.ReleaseDate != "" {
+		rd, err = time.Parse("2006-01-02", req.ReleaseDate)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid release_date format, expected YYYY-MM-DD"})
+			return
+		}
+	}
+
+	userIDValue, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	film, createErr := h.filmService.CreateFilm(
+		req.Title,
+		req.Director,
+		req.Cast,
+		req.Genre,
+		req.Synopsis,
+		rd,
+		userIDValue.(uint),
+	)
+	if createErr != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": createErr.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, film)
 }
