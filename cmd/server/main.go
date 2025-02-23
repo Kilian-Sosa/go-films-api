@@ -37,12 +37,16 @@ func main() {
 
 	authHandler := http.NewAuthHandler(userService)
 
+	filmRepo := repository.NewFilmRepositoryGorm(db)
+	filmService := usecase.NewFilmService(filmRepo)
+	filmHandler := http.NewFilmHandler(filmService)
+
 	r := gin.Default()
 
 	r.POST("/register", authHandler.Register)
 	r.POST("/login", authHandler.Login)
+	r.GET("/films", filmHandler.GetFilms)
 
-	log.Printf("Server running on port %s", port)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("could not start server: %v", err)
 	}
