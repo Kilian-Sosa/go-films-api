@@ -13,4 +13,6 @@ type Film struct {
 	Synopsis    string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+
+	User User `gorm:"foreignKey:UserID"`
 }
