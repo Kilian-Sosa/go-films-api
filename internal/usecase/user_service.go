@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -30,12 +31,29 @@ func NewUserService(repo repository.UserRepository) UserService {
 	}
 }
 
+// Validation constants
+const (
+	PasswordMinLen = 6
+	PasswordMaxLen = 20
+)
+
+// Regex for username: start with letter, then alphanumeric
+var usernameRegex = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]*$`)
+
 func (s *userService) Register(username, password string) error {
-	existingUser, err := s.userRepo.GetUserByUsername(username)
+	if !usernameRegex.MatchString(username) {
+		return errors.New("username must start with a letter and contain only alphanumeric characters")
+	}
+
+	if len(password) < PasswordMinLen || len(password) > PasswordMaxLen {
+		return fmt.Errorf("password must be between %d and %d characters", PasswordMinLen, PasswordMaxLen)
+	}
+
+	existing, err := s.userRepo.GetUserByUsername(username)
 	if err != nil {
 		return fmt.Errorf("repository error: %w", err)
 	}
-	if existingUser != nil {
+	if existing != nil {
 		return errors.New("username already taken")
 	}
 
@@ -48,11 +66,10 @@ func (s *userService) Register(username, password string) error {
 		Username: username,
 		Password: string(hashedPass),
 	}
-
-	err = s.userRepo.CreateUser(newUser)
-	if err != nil {
+	if err := s.userRepo.CreateUser(newUser); err != nil {
 		return err
 	}
+
 	return nil
 }
 
