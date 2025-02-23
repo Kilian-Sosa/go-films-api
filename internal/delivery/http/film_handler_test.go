@@ -53,6 +53,11 @@ func (m *MockFilmService) UpdateFilm(id uint, userID uint, data usecase.UpdateFi
 	return nil, args.Error(1)
 }
 
+func (m *MockFilmService) DeleteFilm(id, userID uint) error {
+	args := m.Called(id, userID)
+	return args.Error(0)
+}
+
 func TestGetFilms_NoFilters(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -384,4 +389,110 @@ func TestUpdateFilm_Forbidden(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, w.Code)
 	assert.Contains(t, w.Body.String(), "forbidden: only creator can update this film")
 	mockService.AssertExpectations(t)
+}
+
+func TestDeleteFilm_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockService := new(MockFilmService)
+	filmHandler := filmHttp.NewFilmHandler(mockService)
+
+	r := gin.Default()
+
+	ginUserIDMiddleware := func(c *gin.Context) {
+		c.Set("userID", uint(5))
+		c.Next()
+	}
+	r.Use(ginUserIDMiddleware)
+
+	r.DELETE("/films/:id", filmHandler.DeleteFilm)
+
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", uint(5))
+		c.Next()
+	})
+
+	mockService.
+		On("DeleteFilm", uint(10), uint(5)).
+		Return(nil)
+
+	req, _ := http.NewRequest("DELETE", "/films/10", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	mockService.AssertExpectations(t)
+}
+
+func TestDeleteFilm_NotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockService := new(MockFilmService)
+	filmHandler := filmHttp.NewFilmHandler(mockService)
+
+	r := gin.Default()
+
+	ginUserIDMiddleware := func(c *gin.Context) {
+		c.Set("userID", uint(5))
+		c.Next()
+	}
+	r.Use(ginUserIDMiddleware)
+
+	r.DELETE("/films/:id", filmHandler.DeleteFilm)
+
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", uint(5))
+		c.Next()
+	})
+
+	mockService.
+		On("DeleteFilm", uint(99), uint(5)).
+		Return(errors.New("film not found"))
+
+	req, _ := http.NewRequest("DELETE", "/films/99", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Contains(t, w.Body.String(), "film not found")
+
+	mockService.AssertExpectations(t)
+}
+
+func TestDeleteFilm_Forbidden(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockService := new(MockFilmService)
+	filmHandler := filmHttp.NewFilmHandler(mockService)
+
+	r := gin.Default()
+
+	ginUserIDMiddleware := func(c *gin.Context) {
+		c.Set("userID", uint(5))
+		c.Next()
+	}
+	r.Use(ginUserIDMiddleware)
+
+	r.DELETE("/films/:id", filmHandler.DeleteFilm)
+
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", uint(5))
+		c.Next()
+	})
+
+	mockService.
+		On("DeleteFilm", uint(100), uint(5)).
+		Return(errors.New("forbidden: only creator can delete this film"))
+
+	req, _ := http.NewRequest("DELETE", "/films/100", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+	assert.Contains(t, w.Body.String(), "forbidden: only creator can delete this film")
+	mockService.AssertExpectations(t)
+
 }
