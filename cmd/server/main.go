@@ -1,3 +1,16 @@
+// @title Go Films API
+// @version 1.0
+// @description This is a REST API for managing favorite films.
+// @termsOfService http://swagger.io/terms/
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package main
 
 import (
@@ -9,7 +22,11 @@ import (
 	"log"
 	"os"
 
+	_ "go-films-api/docs"
+
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -45,6 +62,8 @@ func main() {
 	authMiddleware := middleware.JWTMiddleware()
 
 	r := gin.Default()
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.POST("/register", authHandler.Register)
 	r.POST("/login", authHandler.Login)
