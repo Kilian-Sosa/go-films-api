@@ -12,11 +12,11 @@ import (
 func JWTMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		if !strings.HasPrefix(authHeader, "Bearer ") {
+		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid auth header"})
 			return
 		}
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ") // Remove "Bearer " prefix, if present (Swagger UI does not include it)
 
 		secret := []byte(os.Getenv("JWT_SECRET"))
 		token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
