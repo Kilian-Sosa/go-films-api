@@ -24,6 +24,8 @@ COPY --from=builder /app/server /app/server
 COPY --from=builder /app/migrate /app/migrate
 COPY --from=builder /app/migrations /app/migrations
 
+COPY docs ./docs
+
 # For debugging
 COPY --from=builder /go/bin/dlv /usr/local/bin/dlv
 
