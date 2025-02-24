@@ -10,6 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type FilmHandler struct {
+	filmService usecase.FilmService
+}
+
 type CreateFilmRequest struct {
 	Title       string `json:"title" binding:"required"`
 	Director    string `json:"director"`
@@ -28,14 +32,23 @@ type UpdateFilmRequest struct {
 	Synopsis    *string `json:"synopsis"`
 }
 
-type FilmHandler struct {
-	filmService usecase.FilmService
-}
-
 func NewFilmHandler(fs usecase.FilmService) *FilmHandler {
 	return &FilmHandler{filmService: fs}
 }
 
+// GetFilms godoc
+// @Summary Get a list of films
+// @Description Retrieves a list of films, optionally filtered by title, genre, and release date.
+// @Tags films
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param title query string false "Film title"
+// @Param genre query string false "Film genre"
+// @Param release_date query string false "Film release date (YYYY-MM-DD)"
+// @Success 200 {array} domain.Film
+// @Failure 500 {object} map[string]string "Internal Server Error"
+// @Router /films [get]
 func (h *FilmHandler) GetFilms(c *gin.Context) {
 	title := c.Query("title")
 	genre := c.Query("genre")
@@ -60,6 +73,19 @@ func (h *FilmHandler) GetFilms(c *gin.Context) {
 	c.JSON(http.StatusOK, films)
 }
 
+// GetFilmDetails godoc
+// @Summary Get details of a specific film
+// @Description Retrieves the details of a film by ID, including the creator user.
+// @Tags films
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path int true "Film ID"
+// @Success 200 {object} domain.Film
+// @Failure 400 {object} map[string]string "Invalid Film ID"
+// @Failure 404 {object} map[string]string "Film not found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
+// @Router /films/{id} [get]
 func (h *FilmHandler) GetFilmDetails(c *gin.Context) {
 	idParam := c.Param("id")
 
@@ -83,6 +109,18 @@ func (h *FilmHandler) GetFilmDetails(c *gin.Context) {
 	c.JSON(http.StatusOK, film)
 }
 
+// CreateFilm godoc
+// @Summary Create a new film
+// @Description Adds a new film to the database, linked to the authenticated user.
+// @Tags films
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param film body CreateFilmRequest true "Film details"
+// @Success 201 {object} domain.Film
+// @Failure 400 {object} map[string]string "Invalid input"
+// @Failure 409 {object} map[string]string "Film already exists"
+// @Router /films [post]
 func (h *FilmHandler) CreateFilm(c *gin.Context) {
 	var req CreateFilmRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -123,6 +161,21 @@ func (h *FilmHandler) CreateFilm(c *gin.Context) {
 	c.JSON(http.StatusCreated, film)
 }
 
+// UpdateFilm godoc
+// @Summary Update a film
+// @Description Updates the details of a film, only allowed for the creator user.
+// @Tags films
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path int true "Film ID"
+// @Param film body UpdateFilmRequest true "Film details"
+// @Success 200 {object} domain.Film
+// @Failure 400 {object} map[string]string "Invalid input"
+// @Failure 403 {object} map[string]string "Forbidden: only creator can update this film"
+// @Failure 404 {object} map[string]string "Film not found"
+// @Failure 409 {object} map[string]string "Could not update film"
+// @Router /films/{id} [put]
 func (h *FilmHandler) UpdateFilm(c *gin.Context) {
 	idParam := c.Param("id")
 	id64, err := strconv.ParseUint(idParam, 10, 32)
@@ -184,6 +237,18 @@ func (h *FilmHandler) UpdateFilm(c *gin.Context) {
 	c.JSON(http.StatusOK, updated)
 }
 
+// DeleteFilm godoc
+// @Summary Delete a film
+// @Description Deletes a film from the database, only allowed for the creator user.
+// @Tags films
+// @Security BearerAuth
+// @Param id path int true "Film ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} map[string]string "Invalid Film ID"
+// @Failure 403 {object} map[string]string "Forbidden: only creator can delete this film"
+// @Failure 404 {object} map[string]string "Film not found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
+// @Router /films/{id} [delete]
 func (h *FilmHandler) DeleteFilm(c *gin.Context) {
 	idParam := c.Param("id")
 	id64, err := strconv.ParseUint(idParam, 10, 32)
