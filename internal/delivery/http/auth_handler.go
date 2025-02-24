@@ -29,6 +29,17 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// Register godoc
+// @Summary Register a new user
+// @Description Registers a new user with the provided username and password.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "User credentials"
+// @Success 201 {object} map[string]string "User registered successfully"
+// @Failure 400 {object} map[string]string "Invalid request body"
+// @Failure 409 {object} map[string]string "Username already exists"
+// @Router /register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -44,6 +55,17 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "user registered successfully"})
 }
 
+// Login godoc
+// @Summary Login
+// @Description Logs in a user with the provided username and password.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "User credentials"
+// @Success 200 {object} map[string]string "Login successful"
+// @Failure 400 {object} map[string]string "Invalid request body"
+// @Failure 401 {object} map[string]string "Invalid credentials"
+// @Router /login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
