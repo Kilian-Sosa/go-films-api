@@ -69,6 +69,46 @@ This will update the `docs/` folder with fresh OpenAPI definitions.
 
 ---
 
+## 🔧 Code Formatting
+
+This project follows Go's recommended formatting conventions. To ensure consistent formatting across all files, **`goimports`** is used.
+
+### What is `goimports`?
+`goimports` is a popular tool that:
+- Formats Go code (like `gofmt` does)
+- Automatically manages and organizes imports (removing unused imports and adding missing ones)
+
+### Installing `goimports`
+If you don't have it installed, you can get it with:
+```bash
+go install golang.org/x/tools/cmd/goimports@latest
+```
+
+### Using `goimports`
+You can format your files manually with:
+```bash
+goimports -w ./
+```
+This will recursively format all files in the project.
+
+### VSCode Auto-Format on Save
+If you're using VSCode, configure it to run `goimports` automatically on save:
+
+1. Open settings (Ctrl + ,)
+2. Search for `go.formatTool`
+3. Set it to:
+```json
+"go.formatTool": "goimports"
+```
+4. Ensure format-on-save is enabled:
+```json
+"editor.formatOnSave": true
+```
+
+This ensures your code stays clean and properly formatted with minimal effort.
+
+---
+
 ## 🚀 Getting Started
 
 ### Architecture Overview
@@ -196,6 +236,7 @@ curl -X POST http://localhost:8080/films \
 | Database    | MySQL |
 | Auth        | JWT |
 | Docs        | Swagger (swaggo) |
+| Formatter   | goimports |
 | Container   | Docker |
 | Tests       | Testify |
 
